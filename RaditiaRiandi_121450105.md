@@ -781,12 +781,6 @@ Gambar berukuran 32x32x3 piksel yang kami gunakan relatif kecil dibandingkan den
 
 Meskipun kami tidak akan menyelidikinya secara eksperimental di sini, dari pengalaman saya sendiri dengan gambar berukuran 256x256x3 atau 512x512x3 piksel, HDF5 biasanya sedikit lebih efisien dalam hal penggunaan disk daripada LMDB. Ini adalah transisi yang baik ke bagian akhir, diskusi kualitatif tentang perbedaan antara metode-metode tersebut.
 
-## **Kesimpulan**
-
-Dalam artikel ini, Anda telah diperkenalkan dengan tiga cara untuk menyimpan dan mengakses banyak gambar menggunakan Python, dan mungkin Anda memiliki kesempatan untuk mencoba beberapa di antaranya. Semua kode untuk artikel ini tersedia dalam [Jupyter Notebook](https://github.com/balqiszamzami/SD3203-Teknologi-Basis-Data/blob/main/tugas/Pertemuan9/Jawaban/storing_images.ipynb). Namun, risikonya menjadi tanggung jawab Anda sendiri, karena beberapa GB ruang disk Anda akan digunakan untuk menyimpan gambar-gambar kecil mobil, kapal, dan sebagainya.
-
-Anda telah melihat bukti bagaimana berbagai metode penyimpanan dapat memengaruhi waktu baca dan tulis secara drastis, serta beberapa kelebihan dan kekurangan dari ketiga metode yang dibahas dalam artikel ini. Meskipun menyimpan gambar sebagai file `.png` mungkin merupakan cara yang paling intuitif, terdapat manfaat kinerja yang besar jika mempertimbangkan metode seperti HDF5 atau LMDB. **Tidak ada metode penyimpanan yang sempurna, dan metode terbaik bergantung pada kumpulan data dan kasus penggunaan spesifik Anda.**
-
 _**source**_ : [Three Ways of Storing and Accessing Lots of Images in Python](https://realpython.com/storing-images-in-python/#a-dataset-to-play-with)
 
 </div>
