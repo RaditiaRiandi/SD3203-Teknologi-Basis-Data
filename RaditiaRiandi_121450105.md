@@ -1,30 +1,5 @@
 > **Nama : Raditia Riandi** <br> **NIM : 121450105** <br> **Kelas : RB**
 
-# **Tiga Cara Menyimpan dan Mengakses Banyak Gambar dengan Python (_Three Ways of Storing and Accessing Lots of Images in Python_)**
-
-## Daftar Isi
-
-- [Gambaran Umum](#gambaran-umum)
-- [Dataset](#dataset)
-- [Installasi](#installasi)
-- [Menyimpan Satu Gambar](#menyimpan-satu-gambar)
-  - [Menyimpan ke Disk](#menyimpan-ke-disk)
-  - [Menyimpan ke LMDB](#menyimpan-ke-lmdb)
-  - [Menyimpan dengan HDF5](#menyimpan-dengan-hdf5)
-- [Menyimpan Banyak Gambar](#menyimpan-banyak-gambar)
-  - [Menyesuaikan Kode untuk Banyak Gambar](#menyesuaikan-kode-untuk-banyak-gambar)
-  - [Mempersiapkan Kumpulan Data](#mempersiapkan-kumpulan-data)
-  - [Eksperimen untuk Menyimpan Banyak Gambar](#eksperimen-untuk-menyimpan-banyak-gambar)
-- [Membaca Satu Gambar](#membaca-satu-gambar)
-  - [Membaca Dari Disk](#membaca-dari-disk)
-  - [Membaca Dari LMDB](#membaca-dari-lmdb)
-  - [Membaca Dari HDF5](#membaca-dari-hdf5)
-- [Membaca Banyak Gambar](#membaca-banyak-gambar)
-  - [Modifikasi Kode untuk Menangani Banyak Gambar](#modifikasi-kode-untuk-menangani-banyak-gambar)
-  - [Percobaan untuk Menyimpan Sejumlah Besar Gambar](#percobaan-untuk-menyimpan-sejumlah-besar-gambar)
-- [Mempertimbangkan Penggunaan Disk](#mempertimbangkan-penggunaan-disk)
-- [Kesimpulan](#kesimpulan)
-
 ## Gambaran Umum
 
 1. **Disk**
