@@ -1,5 +1,5 @@
 > **Nama : Raditia Riandi** <br> **NIM : 121450105** <br> **Kelas : RB**
-
+![header]([https://example.com/logo.png](https://files.realpython.com/media/cifar_10.e77ef0cd86df.png))
 ## Gambaran Umum
 
 1. **Disk**
