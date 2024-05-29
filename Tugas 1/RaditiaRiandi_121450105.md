@@ -24,9 +24,11 @@
 3. Apa perbedaan performa saat Anda membaca dan menulis banyak gambar
 4. Bagaimana perbandingan ketiga metode dalam hal penggunaan disk
 
-Dalam artikel ini, kita akan menjelajahi implementasi ketiga metode tersebut menggunakan dataset CIFAR-10 (_Canadian Institute for Advanced Research_). Kita akan membandingkan kinerja, penggunaan disk, dan kemudahan penggunaan masing-masing metode, sehingga Anda dapat memilih metode yang paling sesuai untuk proyek Anda.
-Sebelum memulai, pastikan Anda memiliki dasar yang kuat dalam Python dan pemahaman dasar tentang gambar (bahwa gambar terdiri dari array angka multi-dimensi) serta konsep memori relatif, seperti perbedaan antara 10MB dan 10GB
+Dalam artikel ini, kita akan menjelajahi implementasi tiga metode penyimpanan gambar menggunakan dataset CIFAR-10 (Canadian Institute for Advanced Research). Kita akan membandingkan kinerja, penggunaan disk, dan kemudahan penggunaan masing-masing metode, sehingga Anda dapat memilih metode yang paling sesuai untuk proyek Anda. Dataset CIFAR-10 terdiri dari 60.000 gambar berwarna dalam 10 kelas yang berbeda, dengan setiap gambar berukuran 32x32 piksel. Kita akan menggunakan CIFAR-10 sebagai contoh untuk melihat bagaimana setiap metode bekerja dalam praktek.
 
+Sebelum memulai, pastikan Anda memiliki dasar yang kuat dalam Python dan pemahaman dasar tentang gambar. Ingat bahwa gambar terdiri dari array angka multi-dimensi yang merepresentasikan nilai piksel. Misalnya, gambar berwarna 32x32 memiliki dimensi (32, 32, 3), di mana 3 merepresentasikan tiga kanal warna (merah, hijau, dan biru). Selain itu, penting juga untuk memahami konsep memori relatif, seperti perbedaan antara 10MB dan 10GB. Memahami bagaimana memori digunakan dan dioptimalkan adalah kunci dalam memilih metode penyimpanan yang paling efisien.
+
+Untuk eksperimen ini, kita akan membandingkan tiga metode penyimpanan gambar: penyimpanan langsung di disk, penyimpanan menggunakan LMDB (Lightning Memory-Mapped Database), dan penyimpanan menggunakan HDF5 (Hierarchical Data Format version 5). Kita akan mengukur waktu yang dibutuhkan untuk membaca dan menulis file, serta seberapa banyak memori disk yang digunakan oleh setiap metode. Implementasi ini akan membantu Anda memahami kelebihan dan kekurangan masing-masing metode, dan memberikan panduan praktis dalam memilih metode yang paling sesuai untuk kebutuhan penyimpanan gambar Anda.
 Anda dapat mengunduh CIFAR-10 dalam format Python dari tautan berikut: [The CIFAR-10 dataset](https://www.cs.toronto.edu/~kriz/cifar.html). <br>
 
 ## Installasi
@@ -45,9 +47,11 @@ Anda dapat mengunduh CIFAR-10 dalam format Python dari tautan berikut: [The CIFA
 
 ## Menyimpan Satu Gambar
 
-Mari kita langsung melihat perbandingan kuantitatif dari tugas-tugas dasar yang penting: berapa lama waktu yang diperlukan untuk membaca dan menulis file, serta berapa banyak memori disk yang akan digunakan. Hal ini juga akan berfungsi sebagai pengantar dasar tentang cara kerja metode-metode tersebut, dengan contoh kode tentang cara penggunaannya. Ketika saya menyebut "file", umumnya saya merujuk pada banyak file. Namun, penting untuk membuat perbedaan karena beberapa metode mungkin dioptimalkan untuk operasi dan jumlah file yang berbeda. <br>
-Untuk keperluan eksperimen, **kita dapat membandingkan kinerja antara berbagai jumlah file, dengan faktor 10 dari satu gambar hingga 100.000 gambar**. Karena lima batch CIFAR-10 kita berjumlah 50.000 gambar, kita dapat menggunakan setiap gambar dua kali untuk mendapatkan 100.000 gambar. Untuk mempersiapkan eksperimen, Anda akan membuat folder untuk setiap metode, yang akan berisi semua file database atau gambar, dan menyimpan path ke direktori-direktori tersebut dalam variabel:
+Mari kita langsung melihat perbandingan kuantitatif dari tugas-tugas dasar yang penting: berapa lama waktu yang diperlukan untuk membaca dan menulis file, serta berapa banyak memori disk yang akan digunakan. Hal ini juga akan berfungsi sebagai pengantar dasar tentang cara kerja metode-metode tersebut, dengan contoh kode tentang cara penggunaannya. Ketika saya menyebut "file", umumnya saya merujuk pada banyak file. Namun, penting untuk membuat perbedaan karena beberapa metode mungkin dioptimalkan untuk operasi dan jumlah file yang berbeda.
 
+Untuk keperluan eksperimen, kita dapat membandingkan kinerja antara berbagai jumlah file, dengan faktor 10 dari satu gambar hingga 100.000 gambar. Karena lima batch CIFAR-10 kita berjumlah 50.000 gambar, kita dapat menggunakan setiap gambar dua kali untuk mendapatkan 100.000 gambar. Eksperimen ini akan membantu kita memahami bagaimana setiap metode penyimpanan menangani berbagai skala file dan seberapa efisien mereka dalam operasi baca-tulis serta penggunaan memori disk.
+
+Untuk mempersiapkan eksperimen, kita akan membuat folder untuk setiap metode penyimpanan yang akan diuji. Setiap folder akan berisi semua file database atau gambar yang diperlukan untuk metode tersebut. Kita akan menyimpan path ke direktori-direktori ini dalam variabel untuk memudahkan akses selama eksperimen. Berikut adalah contoh kode untuk menyiapkan struktur folder dan path untuk eksperimen:
 ```
 from pathlib import Path
 
@@ -89,14 +93,21 @@ def store_single_disk(image, image_id, label):
         writer.writerow([label])
 ```
 
-Ini menyimpan gambar. Dalam semua aplikasi realistis, Anda juga peduli dengan meta data yang melekat pada gambar, yang dalam dataset contoh kita adalah label gambar. Ketika Anda menyimpan gambar ke disk, ada beberapa opsi untuk menyimpan meta data. Salah satu solusinya adalah mengenkode label ke dalam nama file gambar. Ini memiliki keuntungan tidak memerlukan file tambahan. Namun, ini juga memiliki kerugian besar karena memaksa Anda untuk berurusan dengan semua file kapan pun Anda melakukan sesuatu dengan label. Menyimpan label dalam file terpisah memungkinkan Anda bermain-main dengan label saja, tanpa harus memuat gambar. Di atas, saya telah menyimpan label dalam file `.csv` terpisah untuk eksperimen ini.
+Ketika Anda menyimpan gambar, penting juga untuk mempertimbangkan metadata yang melekat pada gambar, seperti label gambar dalam dataset contoh kita. Ada beberapa opsi untuk menyimpan metadata saat menyimpan gambar ke disk. Salah satu solusi adalah mengenkode label ke dalam nama file gambar. Metode ini memiliki keuntungan karena tidak memerlukan file tambahan untuk menyimpan metadata, sehingga memudahkan pengelolaan file gambar secara sederhana.
+
+Namun, mengenkode label ke dalam nama file gambar juga memiliki kerugian signifikan. Metode ini memaksa Anda untuk berurusan dengan semua file gambar setiap kali Anda perlu melakukan sesuatu dengan label. Ini bisa menjadi sangat tidak efisien, terutama saat bekerja dengan dataset besar, karena Anda harus memproses atau mengakses semua file gambar meskipun Anda hanya ingin memanipulasi atau menganalisis label.
+
+Sebagai alternatif yang lebih fleksibel, menyimpan label dalam file terpisah memungkinkan Anda bermain-main dengan label tanpa harus memuat gambar. Misalnya, Anda dapat menyimpan label dalam file `.csv` terpisah. Ini memungkinkan Anda untuk dengan mudah memanipulasi atau menganalisis label secara terpisah dari gambar, yang dapat menghemat waktu dan sumber daya. Dalam eksperimen ini, menyimpan label dalam file `.csv` terpisah memungkinkan Anda untuk fokus pada label saja ketika diperlukan, tanpa harus menangani gambar secara langsung setiap saat.
 
 Sekarang mari kita lanjutkan ke tugas yang sama persis dengan LMDB.
 
 ### **Menyimpan ke LMDB**
 
-Pertama-tama, LMDB adalah sistem penyimpanan key-value di mana setiap entri disimpan sebagai _array byte_. Dalam kasus kita, kunci akan menjadi pengenal unik untuk setiap gambar, dan nilainya akan menjadi gambar itu sendiri. **Baik kunci maupun nilai diharapkan menjadi string**, sehingga penggunaan umum adalah menserialkan nilai menjadi string, lalu mendeserialkannya ketika membacanya kembali. Anda dapat menggunakan `pickle` untuk serialisasi. Setiap objek Python dapat diserialisasi, jadi sebaiknya Anda juga menyertakan metadata gambar dalam database. Ini akan menghemat upaya Anda untuk melekatkan metadata kembali ke data gambar saat memuat dataset dari disk.
+Pertama-tama, LMDB adalah sistem penyimpanan key-value di mana setiap entri disimpan sebagai _array byte_. Dalam konteks penggunaan kita, kunci akan menjadi pengenal unik untuk setiap gambar, dan nilai akan menjadi gambar itu sendiri. LMDB menyimpan kedua elemen ini sebagai string. Oleh karena itu, penggunaan umum dalam LMDB adalah menserialkan nilai gambar menjadi string sebelum menyimpannya, dan mendeserialkannya kembali saat membaca data dari database. Hal ini memastikan bahwa data gambar dapat disimpan dan diakses dengan efisien.
 
+Untuk melakukan serialisasi, Anda dapat menggunakan modul `pickle` di Python. `Pickle` memungkinkan serialisasi objek Python, termasuk gambar dan metadata yang terkait. Dengan menserialkan gambar beserta metadata menjadi string, Anda dapat menyimpan semua informasi yang relevan dalam satu entri database. Ini sangat berguna karena menghindari kebutuhan untuk melampirkan metadata secara terpisah setelah memuat dataset dari disk, sehingga menyederhanakan proses pengelolaan data.
+
+Menyertakan metadata dalam database LMDB memberikan keuntungan tambahan dalam hal efisiensi dan kemudahan akses. Saat Anda membaca dataset dari database, Anda akan mendapatkan data gambar lengkap dengan metadatanya, menghemat waktu dan usaha dalam proses pemrosesan data. Ini menjadikan LMDB solusi yang kuat dan fleksibel untuk penyimpanan dataset gambar yang besar dan kompleks, dengan manfaat tambahan dari struktur penyimpanan yang terorganisir dan konsisten.
 Anda dapat membuat kelas Python dasar untuk gambar dan metadatanya:
 
 ```
@@ -117,7 +128,11 @@ class CIFAR_Image:
         return image.reshape(*self.size, self.channels)
 ```
 
-Kedua, karena LMDB adalah pemetaan memori, database baru perlu mengetahui berapa banyak memori yang diharapkan akan digunakan. Ini relatif mudah dalam kasus kita, tetapi bisa menjadi sangat merepotkan dalam kasus lain, yang akan Anda lihat lebih dalam di bagian selanjutnya. LMDB menyebut variabel ini sebagai `map_size`. Terakhir, operasi baca dan tulis dengan LMDB dilakukan dalam transaksi. Anda dapat menganggapnya mirip dengan transaksi database tradisional, yang terdiri dari sekelompok operasi pada database. Ini mungkin terlihat jauh lebih rumit daripada versi disk, tetapi tetap terus membaca!
+LMDB (Lightning Memory-Mapped Database) menggunakan pemetaan memori, yang berarti database baru perlu mengetahui berapa banyak memori yang diharapkan akan digunakan. Ini dilakukan dengan menentukan variabel `map_size`. Dalam kasus sederhana, menentukan `map_size` bisa relatif mudah, tetapi dalam kasus yang lebih kompleks, perkiraan ini bisa menjadi sangat merepotkan. Menentukan ukuran peta memori yang tepat adalah penting untuk menghindari kesalahan alokasi memori dan memastikan performa yang optimal.
+
+Operasi baca dan tulis di LMDB dilakukan dalam bentuk transaksi. Transaksi ini mirip dengan transaksi pada database tradisional, yang terdiri dari sekelompok operasi yang dilakukan pada database. Dengan menggunakan transaksi, LMDB memastikan konsistensi data dan memudahkan pengelolaan operasi baca-tulis yang atomik dan konsisten. Meskipun ini menambah lapisan kompleksitas, transaksi memungkinkan kontrol yang lebih baik atas operasi database dan meningkatkan keandalan serta integritas data.
+
+Bagi pengguna yang terbiasa dengan metode penyimpanan berbasis disk yang lebih sederhana, konsep pemetaan memori dan transaksi mungkin terlihat lebih rumit pada awalnya. Namun, dengan pemahaman dan implementasi yang tepat, LMDB menawarkan efisiensi yang lebih tinggi dan performa yang lebih baik untuk pengelolaan dataset gambar yang besar. Melanjutkan untuk memahami dan mengaplikasikan konsep-konsep ini akan memberikan keuntungan signifikan dalam manajemen data skala besar, seperti yang akan dibahas lebih lanjut di bagian selanjutnya.
 
 Dengan tiga poin tersebut dalam pikiran, mari lihat kode untuk menyimpan satu gambar ke LMDB:
 
@@ -147,8 +162,11 @@ def store_single_lmdb(image, image_id, label):
     env.close()
 ```
 
-> Catatan: Adalah ide yang baik untuk menghitung jumlah byte yang tepat yang akan diambil setiap pasangan _key-value_. Dengan dataset gambar berukuran bervariasi, ini akan menjadi perkiraan, tetapi Anda dapat menggunakan `sys.getsizeof()` untuk mendapatkan perkiraan yang masuk akal. Perlu diingat bahwa `sys.getsizeof`(_CIFAR_Image_) hanya akan mengembalikan ukuran definisi kelas, yaitu 1056, bukan ukuran objek yang diinstansiasi. Fungsi juga tidak akan dapat menghitung sepenuhnya item bersarang, daftar, atau objek yang berisi referensi ke objek lain. Atau, Anda dapat menggunakan pympler untuk menghemat beberapa kalkulasi dengan menentukan ukuran pasti dari sebuah objek.
+> Catatan:
 
+Menghitung jumlah byte yang tepat yang akan diambil setiap pasangan _key-value_ dalam dataset gambar merupakan ide yang baik untuk memaksimalkan efisiensi penyimpanan dan akses data. Dengan dataset gambar berukuran bervariasi, perkiraan ini menjadi penting untuk mengatur kapasitas penyimpanan dan performa akses data. Meskipun ukuran gambar dapat bervariasi, menggunakan metode seperti `sys.getsizeof()` dapat memberikan perkiraan yang masuk akal tentang ukuran objek. Namun, perlu diingat bahwa `sys.getsizeof()` mengembalikan ukuran definisi kelas, bukan ukuran sebenarnya dari objek yang diinstansiasi.
+`sys.getsizeof()` hanya mengembalikan ukuran objek pada permukaan, yaitu ukuran objek `CIFAR_Image` sebagai contoh akan mengembalikan nilai 1056 byte, yang hanya mencakup definisi kelas tersebut. Fungsi ini tidak mampu menghitung item bersarang, daftar, atau objek yang mengandung referensi ke objek lain. Oleh karena itu, hasil dari `sys.getsizeof()` mungkin tidak mencerminkan ukuran sebenarnya dari objek yang kompleks atau bersarang, yang dapat menyebabkan perkiraan yang tidak akurat dan potensi kekurangan dalam perencanaan kapasitas penyimpanan.
+Untuk mengatasi keterbatasan ini, Anda dapat menggunakan library seperti pympler yang dirancang untuk menghitung ukuran objek Python dengan lebih akurat. Pympler memungkinkan Anda menentukan ukuran pasti dari sebuah objek, termasuk item bersarang dan referensi ke objek lain. Dengan menggunakan pympler, Anda dapat menghemat kalkulasi dan mendapatkan gambaran yang lebih realistis tentang kebutuhan penyimpanan dataset gambar Anda. Ini sangat membantu dalam membuat keputusan yang lebih baik terkait alokasi sumber daya dan optimisasi penyimpanan data.
 Sekarang Anda siap untuk menyimpan gambar ke LMDB. Terakhir, mari lihat metode terakhir, HDF5.
 
 ### **Menyimpan dengan HDF5**
@@ -780,6 +798,102 @@ LMDB memperoleh efisiensinya dari caching dan memanfaatkan ukuran halaman OS. An
 Gambar berukuran 32x32x3 piksel yang kami gunakan relatif kecil dibandingkan dengan rata-rata gambar yang mungkin Anda gunakan, dan memungkinkan kinerja LMDB yang optimal.
 
 Meskipun kami tidak akan menyelidikinya secara eksperimental di sini, dari pengalaman saya sendiri dengan gambar berukuran 256x256x3 atau 512x512x3 piksel, HDF5 biasanya sedikit lebih efisien dalam hal penggunaan disk daripada LMDB. Ini adalah transisi yang baik ke bagian akhir, diskusi kualitatif tentang perbedaan antara metode-metode tersebut.
+
+**Kesimpulan** : 
+
+Berikut adalah kesimpulan lebih detail tentang berbagai metode penyimpanan dan pengelolaan dataset gambar:
+
+1. **Disk**
+   - **Keuntungan:**
+     - Implementasi sederhana dan langsung menggunakan sistem file komputer.
+     - Tidak memerlukan setup atau konfigurasi tambahan.
+   - **Kerugian:**
+     - Performa lambat untuk dataset gambar yang sangat besar karena akses disk yang tidak efisien.
+     - Pengelolaan file yang banyak bisa menjadi rumit.
+     - Tidak mendukung pencarian atau query yang kompleks.
+
+2. **LMDB (Lightning Memory-Mapped Database)**
+   - **Keuntungan:**
+     - Struktur B-tree yang dioptimalkan untuk akses cepat.
+     - Mendukung penyimpanan dan pengambilan gambar secara efisien.
+     - Cocok untuk dataset gambar yang besar dengan performa tinggi.
+   - **Kerugian:**
+     - Tidak terlalu umum digunakan di luar komunitas tertentu.
+     - Kurva pembelajaran yang lebih tinggi dibandingkan dengan metode sederhana seperti disk.
+
+3. **HDF5 (Hierarchical Data Format version 5)**
+   - **Keuntungan:**
+     - Menyimpan banyak gambar dalam satu file dengan struktur hierarki.
+     - Menghemat ruang disk dan mempercepat proses pembacaan dan penulisan.
+     - Mendukung penyimpanan data terstruktur dan tidak terstruktur.
+   - **Kerugian:**
+     - Memerlukan library khusus untuk membaca dan menulis data.
+     - Format biner, sehingga tidak mudah dibaca atau diubah secara manual.
+
+4. **TFRecord (TensorFlow Record)**
+   - **Keuntungan:**
+     - Format biner yang dirancang untuk meningkatkan efisiensi dengan dataset besar.
+     - Integrasi yang baik dengan TensorFlow dan ekosistemnya.
+     - Mendukung penyimpanan data terstruktur.
+   - **Kerugian:**
+     - Membutuhkan konversi dari format gambar biasa.
+     - Tidak mudah dibaca atau diubah secara manual karena format biner.
+
+5. **SQL Database (MySQL, PostgreSQL)**
+   - **Keuntungan:**
+     - Mendukung transaksi dan query kompleks.
+     - Integrasi mudah dengan aplikasi berbasis SQL.
+     - Kemampuan menyimpan metadata dengan gambar.
+   - **Kerugian:**
+     - Tidak dioptimalkan untuk penyimpanan gambar berukuran besar.
+     - Bisa menjadi lambat jika tidak diindeks dengan benar.
+     - Pengelolaan dan backup database bisa menjadi rumit untuk dataset besar.
+
+6. **NoSQL Database (MongoDB, Cassandra)**
+   - **Keuntungan:**
+     - Skalabilitas tinggi dan fleksibel dalam penyimpanan data terstruktur dan tidak terstruktur.
+     - Cepat dalam akses data dan cocok untuk aplikasi yang memerlukan penyimpanan dan pengambilan cepat.
+   - **Kerugian:**
+     - Tidak selalu dioptimalkan untuk penyimpanan file besar.
+     - Memerlukan konfigurasi yang lebih kompleks dan pengetahuan tentang sistem NoSQL.
+
+7. **Object Storage (Amazon S3, Google Cloud Storage)**
+   - **Keuntungan:**
+     - Sangat skalabel dan andal dengan akses global.
+     - Latensi rendah dan biaya penyimpanan yang efektif.
+     - Mendukung penyimpanan data dalam jumlah besar dengan berbagai ukuran.
+   - **Kerugian:**
+     - Memerlukan konektivitas internet untuk akses data.
+     - Biaya akses dan penyimpanan data dapat bertambah tergantung pada penggunaan.
+     - Mungkin memerlukan manajemen hak akses yang lebih ketat.
+
+8. **Blob Storage (Microsoft Azure Blob Storage)**
+   - **Keuntungan:**
+     - Integrasi yang baik dengan ekosistem Azure.
+     - Skalabilitas tinggi dan performa untuk berbagai jenis data.
+     - Mendukung penyimpanan dalam jumlah besar dan mudah diakses.
+   - **Kerugian:**
+     - Biaya tambahan tergantung pada penggunaan dan akses data.
+     - Memerlukan manajemen hak akses yang baik untuk keamanan data.
+     - Memerlukan konektivitas internet untuk akses data.
+     - 
+Pemilihan metode penyimpanan gambar harus mempertimbangkan berbagai faktor seperti ukuran dataset, frekuensi akses, kebutuhan akan kecepatan akses, biaya, dan integrasi dengan sistem atau aplikasi yang digunakan. 
+
+- Untuk dataset kecil atau aplikasi sederhana, metode **Disk** mungkin cukup.
+- Untuk dataset besar dengan kebutuhan akses cepat, **LMDB** atau **HDF5** bisa menjadi pilihan.
+- **TFRecord** sangat cocok untuk aplikasi pembelajaran mesin menggunakan TensorFlow.
+- **SQL** dan **NoSQL Database** dapat digunakan jika memerlukan dukungan transaksi dan query kompleks, serta pengelolaan metadata.
+- **Object Storage** dan **Blob Storage** sangat cocok untuk penyimpanan dalam jumlah besar dengan akses global dan skalabilitas tinggi.
+
+Pemilihan yang tepat dapat meningkatkan efisiensi dan performa aplikasi secara signifikan.
+
+Berbagai metode penyimpanan gambar memiliki kelebihan dan kekurangan yang perlu dipertimbangkan sesuai dengan kebutuhan spesifik. Metode penyimpanan sederhana menggunakan **disk** sangat mudah diimplementasikan karena tidak memerlukan setup atau konfigurasi tambahan. Namun, metode ini menjadi kurang efisien untuk menangani dataset gambar yang sangat besar karena akses disk yang lambat dan pengelolaan file yang banyak bisa menjadi rumit. Untuk aplikasi yang memerlukan pengelolaan file sederhana dan dataset kecil, metode ini mungkin sudah cukup memadai.
+
+Untuk menangani dataset gambar yang besar dengan performa tinggi, metode seperti **LMDB (Lightning Memory-Mapped Database)** dan **HDF5 (Hierarchical Data Format version 5)** lebih disarankan. LMDB menggunakan struktur B-tree yang dioptimalkan untuk akses cepat, sehingga cocok untuk penyimpanan dan pengambilan gambar dalam skala besar. HDF5, dengan struktur hierarkinya, menghemat ruang disk dan mempercepat proses pembacaan dan penulisan, sehingga efisien untuk penyimpanan data terstruktur dan tidak terstruktur. Kedua metode ini, meskipun efisien, memerlukan pengetahuan khusus untuk implementasi dan penggunaan.
+
+**TFRecord (TensorFlow Record)** adalah format biner yang dirancang untuk meningkatkan efisiensi dalam pembelajaran mesin, terutama ketika menggunakan TensorFlow. Format ini mendukung penyimpanan data terstruktur dan cepat dalam pembacaan dan penulisan, menjadikannya pilihan ideal untuk aplikasi pembelajaran mesin dengan dataset besar. Namun, karena formatnya biner, data tidak mudah dibaca atau diubah secara manual dan memerlukan konversi dari format gambar biasa. Dalam kasus di mana metadata dan query kompleks diperlukan, **SQL Database (MySQL, PostgreSQL)** atau **NoSQL Database (MongoDB, Cassandra)** bisa menjadi pilihan yang baik. SQL Database mendukung transaksi dan query yang kompleks serta penyimpanan metadata, tetapi kurang optimal untuk gambar besar. Sebaliknya, NoSQL Database menawarkan skalabilitas tinggi dan fleksibilitas, meski memerlukan konfigurasi yang lebih kompleks.
+
+Untuk penyimpanan skala besar dengan akses global dan latensi rendah, **Object Storage** seperti **Amazon S3** atau **Google Cloud Storage**, serta **Blob Storage** dari **Microsoft Azure**, adalah pilihan yang sangat baik. Kedua metode ini sangat skalabel, andal, dan biaya efektif untuk penyimpanan dalam jumlah besar. Mereka mendukung berbagai ukuran data dengan mudah diakses dari mana saja, meskipun memerlukan konektivitas internet dan manajemen hak akses yang baik. Object Storage dan Blob Storage sangat cocok untuk aplikasi yang membutuhkan penyimpanan dan akses data dalam jumlah besar dengan keandalan tinggi dan skalabilitas global.
 
 _**source**_ : [Three Ways of Storing and Accessing Lots of Images in Python](https://realpython.com/storing-images-in-python/#a-dataset-to-play-with)
 
