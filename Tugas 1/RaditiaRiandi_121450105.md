@@ -1,4 +1,6 @@
 > **Nama : Raditia Riandi** <br> **NIM : 121450105** <br> **Kelas : RB**
+
+**Tiga Cara Menyimpan dan Mengakses Banyak Gambar dengan Python
 ![header]([https://example.com/logo.png](https://files.realpython.com/media/cifar_10.e77ef0cd86df.png))
 ## Gambaran Umum
 
@@ -231,7 +233,13 @@ for method in ("disk", "lmdb", "hdf5"):
     print(f"Method: {method}, Time usage: {t}")
 ```
 
-> Catatan: Saat Anda bermain-main dengan LMDB, Anda mungkin melihat error `MapFullError`: `mdb_txn_commit`: `MDB_MAP_FULL`: Batas ukuran lingkungan mapsize tercapai. Penting untuk dicatat bahwa LMDB **tidak** menimpa nilai yang sudah ada, bahkan jika memiliki kunci yang sama. Ini berkontribusi pada waktu tulis yang cepat, tetapi juga berarti bahwa jika Anda menyimpan gambar lebih dari satu kali dalam file LMDB yang sama, maka Anda akan menggunakan map size. Jika Anda menjalankan fungsi penyimpanan, pastikan untuk menghapus file LMDB yang sudah ada terlebih dahulu.
+> Catatan: Saat bekerja dengan LMDB, Anda mungkin akan menemui error `MapFullError`, yang mengindikasikan bahwa ukuran peta (map size) yang ditentukan telah mencapai batasnya. Hal ini biasanya terjadi saat Anda mencoba menulis data baru ke dalam database LMDB yang sudah mencapai ukuran maksimum yang ditetapkan sebelumnya. Penting untuk diingat bahwa LMDB tidak akan menimpa nilai yang sudah ada, bahkan jika kunci yang sama digunakan. Ini memungkinkan operasi tulis yang cepat, tetapi juga berarti bahwa jika Anda menyimpan data yang sama berulang kali dalam file LMDB yang sama, ukuran peta akan terus bertambah.
+
+Jika Anda menghadapi error `MapFullError`, Anda perlu mengatasi masalah ukuran peta LMDB. Salah satu solusi adalah dengan menambah ukuran peta menggunakan fungsi `mdb_env_set_mapsize` sebelum membuka lingkungan LMDB. Namun, perlu diingat bahwa menambah ukuran peta dapat mengakibatkan penggunaan memori yang lebih besar, jadi pastikan untuk menyesuaikan ukuran peta dengan kebutuhan aplikasi Anda.
+
+Jika Anda ingin menyimpan ulang data ke dalam file LMDB yang sudah ada, pastikan untuk menghapus file LMDB tersebut terlebih dahulu sebelum menjalankan fungsi penyimpanan. Hal ini penting karena, seperti yang telah disebutkan sebelumnya, LMDB tidak akan menimpa nilai yang sudah ada. Dengan menghapus file LMDB yang sudah ada, Anda dapat memulai kembali dari awal dengan ukuran peta yang sesuai dengan kebutuhan Anda.
+
+Dalam penggunaan praktis, penting untuk memantau ukuran peta LMDB secara berkala dan menyesuaikannya jika diperlukan agar tidak mencapai batas kapasitas. Dengan memahami karakteristik dan perilaku LMDB, Anda dapat mengoptimalkan penggunaan dan kinerjanya dalam aplikasi Anda.
 
 Ingat bahwa kita tertarik pada waktu proses, yang ditampilkan di sini dalam detik, dan juga penggunaan memori:
 | Metode | Simpan Gambar Tunggal + Meta | Penyimpanan |
@@ -240,20 +248,26 @@ Ingat bahwa kita tertarik pada waktu proses, yang ditampilkan di sini dalam deti
 | LMDB | 1,203 ms | 32 K |
 | HDF5 | 8,243 ms | 8 K |
 
-Ada dua kesimpulan di sini:
+Dari hasil eksperimen ini, dapat disimpulkan bahwa semua metode penyimpanan yang diuji (disk, LMDB, dan HDF5) memiliki kinerja yang sangat cepat dalam hal waktu baca dan tulis file. Hal ini menunjukkan bahwa ketiga metode tersebut mampu menangani jumlah file gambar dalam skala besar dengan efisien. Namun, ada perbedaan dalam penggunaan disk, di mana LMDB menggunakan lebih banyak ruang disk dibandingkan dengan metode lainnya.
 
-1. Semua metode sangat cepat.
-2. Dalam hal penggunaan disk, LMDB menggunakan lebih banyak.
+Meskipun LMDB memiliki sedikit keunggulan dalam kinerja, kita belum meyakinkan siapa pun mengapa tidak menyimpan gambar langsung di disk saja. Salah satu alasan utamanya adalah karena format gambar (seperti JPEG atau PNG) adalah format yang dapat dibaca oleh manusia, sehingga Anda dapat membuka dan melihat gambar dari browser sistem file mana pun tanpa perlu melalui proses baca dari database. Hal ini membuat penyimpanan langsung di disk menjadi lebih mudah untuk diakses dan dikelola secara manual.
 
-Jelas, meskipun LMDB memiliki sedikit keunggulan kinerja, kita belum meyakinkan siapa pun mengapa tidak menyimpan gambar di disk saja. Bagaimanapun, itu format yang dapat dibaca manusia, dan Anda dapat membuka dan melihatnya dari browser sistem file mana pun.
+Namun, ada beberapa keuntungan dalam menggunakan metode penyimpanan database seperti LMDB. Salah satunya adalah kemampuannya untuk mengelola data dalam skala besar dengan efisien, terutama dalam aplikasi yang membutuhkan akses cepat dan pencarian data yang kompleks. Selain itu, menggunakan database juga memungkinkan untuk menyimpan metadata atau informasi tambahan yang terkait dengan gambar tanpa perlu mengubah format gambar itu sendiri.
 
+Pilihan antara menyimpan gambar langsung di disk atau menggunakan metode database seperti LMDB harus dipertimbangkan berdasarkan kebutuhan spesifik dari proyek Anda. Jika Anda lebih memperhatikan kemudahan akses dan kebutuhan untuk melihat gambar secara langsung dari sistem file, penyimpanan langsung di disk mungkin merupakan pilihan yang lebih baik. Namun, jika Anda mengutamakan efisiensi dan kemampuan untuk mengelola data dalam skala besar, metode database seperti LMDB bisa menjadi pilihan yang lebih cocok.
 ## Menyimpan Banyak Gambar
 
 Anda telah melihat kode untuk menggunakan berbagai metode penyimpanan untuk menyimpan satu gambar, sekarang kita perlu menyesuaikan kode tersebut untuk menyimpan banyak gambar dan kemudian menjalankan eksperimen waktu.
 
 ### **Menyesuaikan Kode untuk Banyak Gambar**
 
-Menyimpan banyak gambar sebagai file `.png` sesederhana memanggil fungsi `store_single_method()` berulang kali. Namun, hal ini tidak berlaku untuk LMDB atau HDF5, karena Anda tidak ingin membuat file basis data yang berbeda untuk setiap gambar. Sebagai gantinya, Anda ingin memasukkan semua gambar ke dalam satu atau lebih file.
+Menyimpan banyak gambar sebagai file `.png` dapat dilakukan dengan mudah dengan memanggil fungsi `store_single_method()` berulang kali untuk setiap gambar. Namun, pendekatan ini tidak efisien untuk metode penyimpanan seperti LMDB atau HDF5, karena Anda tidak ingin membuat file basis data yang berbeda untuk setiap gambar. Sebagai gantinya, Anda ingin memasukkan semua gambar ke dalam satu atau lebih file basis data.
+
+Dalam kasus LMDB, Anda dapat menyimpan banyak gambar ke dalam satu file basis data dengan menggunakan transaksi. Transaksi memungkinkan Anda untuk menulis beberapa entri ke dalam basis data dalam satu operasi, sehingga memungkinkan pengelompokan gambar ke dalam satu transaksi untuk kemudian disimpan ke dalam satu file LMDB. Hal ini dapat mengoptimalkan proses penulisan data ke dalam basis data dan mengurangi overhead yang terkait dengan membuat file basis data yang berbeda untuk setiap gambar.
+
+Sementara itu, dalam kasus HDF5, Anda juga dapat menyimpan banyak gambar ke dalam satu file HDF5 dengan menggunakan grup dan dataset. Anda dapat membuat grup untuk setiap kategori gambar (misalnya, untuk CIFAR-10, Anda dapat memiliki grup untuk setiap kelas), dan kemudian menyimpan setiap gambar ke dalam dataset di bawah grup yang sesuai. Ini memungkinkan Anda untuk mengelompokkan gambar berdasarkan kategori atau kelasnya, sehingga memudahkan manajemen dan akses data.
+
+Kedua pendekatan ini memungkinkan Anda untuk menyimpan banyak gambar ke dalam satu atau lebih file basis data, yang lebih efisien daripada menyimpan setiap gambar sebagai file terpisah. Dengan menggunakan transaksi untuk LMDB dan grup/dataset untuk HDF5, Anda dapat mengoptimalkan penggunaan ruang disk dan meningkatkan efisiensi akses data.
 
 Anda perlu sedikit mengubah kode dan membuat tiga fungsi baru yang menerima banyak gambar, yaitu `store_many_disk()`, `store_many_lmdb()`, dan `store_many_hdf5()`:
 
@@ -325,7 +339,13 @@ def store_many_hdf5(images, labels):
     file.close()
 ```
 
-Untuk menyimpan lebih dari satu file ke disk, metode file gambar diubah untuk melakukan perulangan pada setiap gambar dalam daftar. Untuk LMDB, perulangan juga dibutuhkan karena kita membuat objek `CIFAR_Image` untuk setiap gambar dan metadata-nya. Penyesuaian terkecil adalah dengan metode HDF5. Sebenarnya, hampir tidak ada penyesuaian sama sekali! File HDF5 tidak memiliki batasan ukuran file selain batasan eksternal atau ukuran dataset, jadi semua gambar dimasukkan ke dalam satu dataset, seperti sebelumnya.
+Untuk menyimpan lebih dari satu file ke disk dalam format gambar seperti PNG, Anda perlu melakukan perulangan pada setiap gambar dalam daftar dan menyimpannya satu per satu. Ini adalah pendekatan yang sederhana dan langsung ke depan, di mana setiap file gambar diproses secara independen dan disimpan ke dalam direktori yang sesuai.
+
+Sementara itu, untuk LMDB, Anda juga perlu melakukan perulangan pada setiap gambar dalam daftar, tetapi dengan sedikit penyesuaian. Anda perlu membuat objek `CIFAR_Image` untuk setiap gambar dan metadata-nya, kemudian menyimpannya ke dalam database LMDB. Hal ini memungkinkan Anda untuk mengelola setiap gambar dan metadata-nya sebagai satu entitas yang terpisah dalam basis data, sehingga memungkinkan pengelolaan data yang lebih efisien.
+
+Namun, penyesuaian terkecil diperlukan saat menggunakan metode HDF5. Anda dapat menyimpan semua gambar ke dalam satu dataset tanpa perlu melakukan penyesuaian tambahan. Ini karena file HDF5 tidak memiliki batasan ukuran file selain batasan eksternal atau ukuran dataset itu sendiri. Dengan demikian, Anda dapat memasukkan semua gambar ke dalam satu dataset tanpa khawatir tentang batasan ukuran file, seperti yang mungkin terjadi dalam format file lainnya.
+
+Dengan menggunakan HDF5, Anda dapat menyimpan semua gambar ke dalam satu file, yang membuat manajemen dan akses data menjadi lebih mudah. Anda juga tidak perlu melakukan perulangan untuk setiap gambar, karena semua gambar dimasukkan ke dalam satu dataset. Ini membuat penggunaan HDF5 menjadi pilihan yang menarik untuk menyimpan dan mengelola dataset gambar dalam skala besar.
 
 Selanjutnya, Anda perlu mempersiapkan dataset untuk eksperimen dengan meningkatkan ukurannya.
 
@@ -514,13 +534,13 @@ def read_single_lmdb(image_id):
     return image, label
 ```
 
-Ada beberapa poin yang perlu diperhatikan tentang potongan kode di atas:
+Ada beberapa poin penting yang perlu diperhatikan tentang potongan kode yang digunakan untuk membaca gambar kembali dari LMDB:
 
-- **Baris 13:** Bendera `readonly=True` menentukan bahwa tidak akan diizinkan penulisan apa pun pada file LMDB hingga transaksi selesai. Dalam istilah basis data, ini setara dengan mengambil kunci baca.
-- **Baris 20:** Untuk mengambil objek CIFAR_Image, Anda perlu membalik langkah yang kita ambil untuk membuat string bytesnya ketika kita menulisnya. Inilah tempat `get_image()` dari objek tersebut berguna.
+1. **Baris 13:** Penggunaan bendera `readonly=True` dalam pembukaan lingkungan LMDB menunjukkan bahwa file LMDB akan dibuka dalam mode baca saja. Ini berarti bahwa tidak akan diizinkan penulisan apa pun pada file LMDB sampai transaksi selesai. Dalam konteks basis data, ini setara dengan mengambil kunci baca, yang mengamankan file dari modifikasi yang tidak diinginkan selama proses baca.
 
-Ini mengakhiri proses membaca gambar kembali dari LMDB. Akhirnya, Anda juga akan ingin melakukan hal yang sama dengan HDF5.
+2. **Baris 20:** Ketika Anda ingin mengambil objek `CIFAR_Image` dari file LMDB, Anda perlu membalik langkah-langkah yang dilakukan saat menyimpannya. Pada saat penulisan, gambar diubah menjadi string bytes menggunakan metode `image_to_byte_array()`. Untuk mengembalikan objek `CIFAR_Image` ke bentuk semula, Anda perlu menggunakan metode `get_image()`. Ini penting karena Anda perlu memastikan bahwa data yang Anda ambil sesuai dengan format yang diharapkan.
 
+Dengan memperhatikan poin-poin ini, Anda dapat mengoptimalkan proses membaca gambar kembali dari file LMDB. Hal yang sama berlaku untuk HDF5, di mana Anda akan perlu mempertimbangkan langkah-langkah yang diperlukan untuk membaca dan mengembalikan data dengan benar. Dengan memahami langkah-langkah yang diperlukan untuk membaca data kembali dari format penyimpanan yang berbeda, Anda dapat mengoptimalkan proses ini dan memastikan integritas data yang diambil.
 ### **Membaca Dari HDF5**
 
 Membaca dari HDF5 terlihat sangat mirip dengan proses penulisan. Berikut adalah kode untuk membuka dan membaca file HDF5 dan mengurai gambar dan metadata yang sama:
@@ -704,10 +724,11 @@ Seperti yang kita lakukan sebelumnya, Anda dapat membuat grafik hasil eksperimen
 
 </div>
 
-Grafik atas menunjukkan waktu baca normal tanpa penyesuaian, menunjukkan perbedaan drastis antara membaca dari file `.png` dan LMDB atau HDF5.
+Grafik pertama menunjukkan waktu baca normal tanpa penyesuaian, yang menyoroti perbedaan drastis dalam waktu baca antara membaca dari file `.png` dan LMDB atau HDF5. Dapat terlihat bahwa waktu baca dari file `.png` jauh lebih lambat dibandingkan dengan waktu baca dari LMDB atau HDF5. Hal ini menunjukkan bahwa penggunaan metode basis data seperti LMDB atau HDF5 dapat signifikan meningkatkan kinerja dalam hal waktu baca data gambar.
 
-Sebaliknya, grafik di bawah menunjukkan `log` dari waktu, menyoroti perbedaan relatif dengan lebih sedikit gambar. Terutama, kita dapat melihat bagaimana HDF5 memulai di belakang tetapi, dengan lebih banyak gambar dan secara konsisten menjadi lebih cepat dibandingkan LMDB dengan selisih yang kecil.
+Sementara itu, grafik kedua menunjukkan `log` dari waktu, yang membantu menyoroti perbedaan relatif dengan lebih sedikit gambar. Dengan menggunakan skala logaritmik, perbedaan waktu baca antara metode dapat terlihat dengan lebih jelas. Terutama, grafik ini menunjukkan bahwa meskipun HDF5 mungkin memulai dengan performa yang lebih lambat dibandingkan dengan LMDB, namun dengan jumlah gambar yang lebih banyak, HDF5 secara konsisten menjadi lebih cepat dibandingkan dengan LMDB dengan selisih yang semakin kecil.
 
+Perbandingan ini memberikan gambaran yang lebih baik tentang kinerja relatif dari masing-masing metode dalam mengelola dan membaca data gambar dalam skala besar. Dengan menggunakan skala logaritmik, perbedaan performa yang mungkin terlihat tidak signifikan dalam skala linier dapat diperjelas, membantu Anda memilih metode yang paling sesuai untuk kebutuhan aplikasi Anda. Dalam konteks ini, penggunaan HDF5 mungkin merupakan pilihan yang lebih baik untuk kinerja yang lebih baik dalam membaca data gambar dalam skala besar.
 **Plot Waktu Baca** <br>
 Dengan menggunakan fungsi plot yang sama seperti yang digunakan sebelumnya untuk menetapkan waktu penulisan, maka kita memperoleh hasil sebagai berikut:
 
@@ -737,11 +758,13 @@ plot_with_legend(
 )
 ```
 
-Dalam praktiknya, waktu untuk membaca data seringkali lebih penting daripada waktu untuk menulis data. Bayangkan Anda sedang melatih jaringan saraf (_neural network_) pada sekumpulan gambar, dan hanya setengah dari keseluruhan kumpulan data gambar tersebut yang dapat dimuat ke dalam RAM sekaligus. Setiap periode pelatihan jaringan memerlukan seluruh kumpulan data, dan model membutuhkan beberapa ratus periode untuk mencapai konvergensi. Pada dasarnya, Anda akan membaca setengah dari kumpulan data ke dalam memori setiap periode.
+Dalam konteks pelatihan jaringan saraf pada dataset gambar, waktu untuk membaca data seringkali lebih penting daripada waktu untuk menulis data. Bayangkan situasi di mana Anda memiliki kumpulan data gambar yang sangat besar, dan hanya setengah dari keseluruhan kumpulan data tersebut yang dapat dimuat ke dalam RAM sekaligus. Setiap periode pelatihan jaringan memerlukan seluruh kumpulan data, dan model Anda membutuhkan beberapa ratus periode untuk mencapai konvergensi. Dalam skenario ini, Anda akan membaca setengah dari kumpulan data ke dalam memori setiap periode.
 
-Ada beberapa trik yang dapat dilakukan, seperti pelatihan mini-batch (_mini-batch training_) untuk sedikit meningkatkan efisiensi, tetapi Anda mengerti maksudnya.
+Dalam situasi seperti ini, kecepatan baca data menjadi kunci, karena waktu yang dibutuhkan untuk membaca data secara langsung mempengaruhi kecepatan pelatihan model. Perbedaan antara waktu baca 40 detik dan 4 detik tiba-tiba menjadi perbedaan antara menunggu enam jam hingga model Anda selesai dilatih, atau hanya empat puluh menit! Dengan demikian, pemilihan metode penyimpanan yang efisien dapat sangat signifikan dalam konteks pelatihan jaringan saraf.
 
-Sekarang, lihat kembali grafik yang telah dibaca sebelumnya. Perbedaan antara waktu baca 40 detik dan 4 detik tiba-tiba menjadi perbedaan antara menunggu enam jam hingga model Anda selesai dilatih, atau hanya empat puluh menit!
+Salah satu trik yang dapat dilakukan adalah dengan menggunakan pelatihan mini-batch, di mana Anda melatih model dengan sejumlah kecil data (mini-batch) pada setiap iterasi, bukan seluruh kumpulan data sekaligus. Hal ini dapat meningkatkan efisiensi dalam penggunaan memori dan juga mempercepat waktu pelatihan secara keseluruhan. Namun, meskipun penggunaan pelatihan mini-batch dapat membantu dalam situasi ini, kecepatan baca data masih tetap menjadi faktor kunci dalam menentukan kecepatan pelatihan jaringan.
+
+Dalam konteks grafik yang telah Anda lihat sebelumnya, perbedaan waktu baca yang tampaknya kecil dalam skala linier dapat memiliki dampak yang signifikan dalam skala logaritmik, terutama ketika waktu pelatihan jaringan membutuhkan ratusan periode. Oleh karena itu, memilih metode penyimpanan yang dapat membaca data dengan cepat, seperti menggunakan HDF5, dapat memberikan keuntungan yang signifikan dalam efisiensi waktu dan pemrosesan dalam pelatihan jaringan saraf pada dataset gambar yang besar.
 
 Jika kita membandingkan waktu baca dan tulis pada grafik yang sama, kita mendapatkan hasil sebagai berikut:
 
@@ -779,9 +802,15 @@ Sekarang setelah Anda melihat manfaat kinerja yang diberikan oleh LMDB dan HDF5,
 
 ## **Mempertimbangkan Penggunaan Disk**
 
-Kecepatan bukan satu-satunya metrik kinerja yang perlu dipertimbangkan. Kita sudah berurusan dengan kumpulan data yang sangat besar, sehingga penggunaan ruang disk juga menjadi masalah yang valid dan relevan.
+Kecepatan bukan satu-satunya metrik kinerja yang perlu dipertimbangkan dalam pemilihan metode penyimpanan data. Ketika berurusan dengan kumpulan data yang sangat besar, seperti contoh kumpulan data gambar sebesar 3TB, penggunaan ruang disk juga menjadi masalah yang valid dan relevan. Dalam situasi seperti ini, menggunakan metode penyimpanan alternatif seperti LMDB atau HDF5 pada dasarnya berarti membuat salinan data tersebut, yang juga harus disimpan di disk. Meskipun metode ini dapat memberikan manfaat kinerja yang besar saat menggunakan data gambar, Anda harus memastikan bahwa Anda memiliki cukup ruang disk yang tersedia untuk menyimpan salinan data.
 
-Misalkan Anda memiliki kumpulan data gambar sebesar 3TB. Sepertinya, Anda sudah menyimpan data tersebut di disk, tidak seperti contoh CIFAR yang kita bahas sebelumnya. Jadi, dengan menggunakan metode penyimpanan alternatif, pada dasarnya Anda membuat salinan data tersebut, yang juga harus disimpan. Melakukan hal ini akan memberikan manfaat kinerja yang besar saat Anda menggunakan gambar, namun Anda harus memastikan Anda memiliki cukup ruang disk.
+Penting untuk diingat bahwa saat menyimpan data dalam format yang dapat diakses oleh manusia, seperti file gambar PNG, Anda hanya perlu menyimpan data sekaligus. Namun, ketika Anda menggunakan metode penyimpanan alternatif seperti LMDB atau HDF5, Anda membuat salinan data dalam format yang dioptimalkan untuk akses cepat dan efisiensi, yang pada gilirannya memerlukan lebih banyak ruang disk.
+
+Dalam kasus kumpulan data gambar sebesar 3TB, Anda harus mempertimbangkan dengan cermat kebutuhan ruang disk Anda sebelum memutuskan untuk menggunakan metode penyimpanan alternatif. Meskipun metode ini dapat memberikan keuntungan kinerja yang signifikan dalam penggunaan data gambar, terutama dalam pelatihan jaringan saraf, Anda harus memastikan bahwa infrastruktur penyimpanan Anda mampu menangani ukuran yang besar.
+
+Selain itu, penting untuk mempertimbangkan juga keamanan dan integritas data saat menggunakan metode penyimpanan alternatif. Dalam beberapa kasus, metode penyimpanan alternatif dapat memberikan keuntungan tambahan dalam hal keamanan data, seperti enkripsi data atau mekanisme kontrol akses yang lebih canggih. Namun, Anda juga harus memastikan bahwa data Anda tetap aman dan terlindungi dari risiko kehilangan atau kerusakan.
+
+Dengan mempertimbangkan dengan cermat berbagai faktor ini, Anda dapat membuat keputusan yang lebih terinformasi tentang pemilihan metode penyimpanan yang paling sesuai untuk kebutuhan Anda. Dengan memahami konsekuensi dan trade-off dari setiap metode, Anda dapat memastikan bahwa Anda dapat mengoptimalkan kinerja dan keamanan dalam penggunaan kumpulan data gambar sebesar 3TB.
 
 **Berapa banyak ruang disk yang digunakan oleh berbagai metode penyimpanan?** Berikut adalah ruang disk yang digunakan oleh setiap metode untuk setiap jumlah gambar:
 
